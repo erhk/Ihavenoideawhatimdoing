@@ -1,8 +1,10 @@
 ---
 title: "A1_P1_Student"
-author: "Céline Carlsen"
+author: "Emily Holm Kelly"
 date: "29/8/2017"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 # Assignment 1, Part 1: Language development in Autism Spectrum Disorder (ASD) - Brushing up your code skills
@@ -38,8 +40,13 @@ N.B. Create a GitHub repository for the Language Development in ASD set of assig
 Set the working directory (the directory with your data and code for these assignments):
 
 ```{r}
+setwd("~/R/R - Datascripts/Assignment 1/Ihavenoideawhatimdoing")
+library(ggplot2);library(pastecs);library(rmarkdown);library(tidyr);library(plyr);
+library(dplyr);library(QuantPsyc);library(VIF);library(stringr);library(tidytext);
+library(lme4);library(lmerTest);library(psych);library(MuMIn);library(tidyverse);library(magrittr)
 
 ```
+
 
 Load the three data sets, after downloading them from dropbox and saving them in your working directory:
 * Demographic data for the participants: https://www.dropbox.com/s/w15pou9wstgc8fe/demo_train.csv?dl=0
@@ -47,6 +54,9 @@ Load the three data sets, after downloading them from dropbox and saving them in
 * Word data: https://www.dropbox.com/s/8ng1civpl2aux58/token_train.csv?dl=0
 
 ```{r}
+demo_train = read.delim('demo_train.csv', sep = ',')
+LU_train = read.delim('LU_train.csv', sep = ',')
+word_data = read.delim('token_train.csv', sep = ',')
 
 ```
 
@@ -65,12 +75,25 @@ Tip: Look into the package data.table, or google "how to rename variables in R"
 
 ```{r}
 
+word_data <- rename(word_data, Child.ID = SUBJ)
+LU_train <- rename(LU_train, Child.ID = SUBJ)
+
+word_data <- rename(word_data, Visit = VISIT)
+LU_train <- rename(LU_train, Visit = VISIT)
+
+
 ```
 
 2b. Find a way to homogeneize the way "visit" is reported. If you look into the original data sets, you will see that in the LU data and the Token data, Visits are called "visit 1" in stead of just 1 (which is the case in the demographic data set).
 Tip: There is a package called stringr, which will be very handy for you also in future assignments. We will return to this package later, but for now use the str_extract () to extract only the number from the variable Visit in each data set. Tip: type ?str_extract() after loading the library, for examples of how to use it.
 
 ```{r}
+
+demo_train$Visit <- str_extract(demo_train$Visit, "\\d")
+
+word_data$Visit <- str_extract(word_data$Visit, "\\d")
+
+LU_train$Visit <- str_extract(LU_train$Visit, "\\d")
 
 ```
 
@@ -86,6 +109,10 @@ Tip: You will have to do identical work for both data sets, so to save time on t
 Challenge: we did not manage to write a short and elegant clean-up function, so feel welcome to try and show off how much better of a programmer your are :-)
 
 ```{r}
+#Fix child names
+demo_train$Child.ID = gsub("\\.","", demo_train$Child.ID)
+word_data$Child.ID = gsub("\\.","", word_data$Child.ID)
+LU_train$Child.ID = gsub("\\.","", LU_train$Child.ID)
 
 ```
 
@@ -104,6 +131,21 @@ The variables we need are: Child.ID, Visit, Ethnicity, Diagnosis, Gender, Age, A
 It would be smart to rename the last two into something you can remember (i.e. nonVerbalIQ, verbalIQ)
 
 ```{r}
+demo_train <- rename(demo_train, Non_verbal_IQ = MullenRaw)
+
+demo_train <- rename(demo_train, Verbal_IQ = ExpressiveLangRaw)
+
+
+
+?select
+
+#Create new subsets with variables we want to use
+
+demographic <- dplyr::select(as_data_frame(demo_train), Child.ID, Visit, Ethnicity, Diagnosis, Gender, Age, ADOS, Non_verbal_IQ, Verbal_IQ)
+
+LU_train <- dplyr::select(as_data_frame(LU_train), Child.ID, Visit, MOT_MLU, MOT_LUstd, CHI_MLU, CHI_LUstd)
+
+word_data <- dplyr::select(as_data_frame(word_data), Child.ID, Visit, types_MOT, types_CHI, tokens_MOT, tokens_CHI)
 
 ```
 
@@ -113,6 +155,11 @@ Tip: Use the merge() function for this.
 Tip: Merge only works for two data frames at the time.
 
 ```{r}
+
+
+LU_demo_merge <- merge(LU_train, demographic)
+full_merge_data <- merge(LU_demo_merge, word_data)
+
 
 ```
 
@@ -130,7 +177,29 @@ So let's make sure that we select only these variables as collected during the f
 
 
 ```{r}
+#Subset data, select only rows visit 1., select all coloumns.
+subData <- subset(full_merge_data, Visit == 1,
+select=c(Child.ID:tokens_CHI))
 
+#Subset data from previous subset, only involving CHI.ID, ADOS, Non_verbal_IQ, Verbal_IQ
+subData_two <- subset(subData, 
+select = c(Child.ID, ADOS, Non_verbal_IQ, Verbal_IQ))
+
+
+#Change names from subData set so they can merge with full dataset data_full
+subData_two <- rename(subData_two, ADOS1 = ADOS)
+subData_two <- rename(subData_two, Non_verbal_IQ1 = Non_verbal_IQ)
+subData_two <- rename(subData_two, Verbal_IQ1 = Verbal_IQ)
+
+#Merge subData_two with original merged data
+ASD_data <- merge(subData_two, full_merge_data, by = "Child.ID")
+
+#Drop unwanted columns
+myvars <- names(ASD_data) %in% c("ADOS", "Non_verbal_IQ", "Verbal_IQ") 
+ASD_data <- ASD_data[!myvars]
+
+#Order columns, Child id, diagnosis (ADOS), demographics (Ethinicity, gender, age), cognitive and clinical features (Verbal and non verbal IQ), linguistic performance.
+ASD_data <- ASD_data[c(1, 5, 11, 2, 12, 13, 10, 4, 3, 6:9, 14:17)]
 
 ```
 
@@ -143,6 +212,15 @@ Tip: as.numeric() might be a useful function, but not alone.
 Tip: Google "how to rename levels in R".
 
 ```{r}
+#convert Child.ID from factor to numeric
+ASD_data$Child.ID <- as.numeric(as.factor(ASD_data$Child.ID))
+
+#Revalue 1 and 2 to F and M. Have to make gender a factor first.
+ASD_data$Gender <- as.factor(as.numeric(ASD_data$Gender))
+ASD_data$Gender <- revalue(ASD_data$Gender, c("1"= "F", "2" = "M"))
+
+#Rename diagnosis from A to ASD, and B to TD
+ASD_data$Diagnosis <- revalue(ASD_data$Diagnosis, c("A"= "ASD", "B" = "TD"))
 
 ```
 
@@ -150,7 +228,7 @@ Tip: Google "how to rename levels in R".
 Save the data set using into a csv file. Hint: look into write.csv()
 
 ```{r}
-
+write.csv(ASD_data, file = "ASD_Data.csv")
 ```
 
 
@@ -166,7 +244,21 @@ List all kids who:
 3. have not completed all trials. Tip: Use pipes to solve this
 
 ```{r}
+#1. Counting, 97 children had a MLU of more than 2.7 morphemes
+count(filter(ASD_data, CHI_MLU >= 2.7))
 
+#2.Selecting Visit 1 and CHI_MLU, setting the limit of morphemes to 1.5, then count amount of
+#CHI_MLU associated with Visit 1. 48 children had a MLU of less than 1.5 for their first visit.
+ASD_data %>%
+  dplyr::select(Visit, CHI_MLU) %>%
+  filter(CHI_MLU <= 1.5 & Visit == 1) %>%
+  count(Visit)
+
+#3. Amountof children that haven't completed the 6 trials, 296
+ASD_data %>%
+  dplyr::select(Visit) %>%
+  filter(Visit !=6) %>%
+  count(Visit !=6)
 
 ```
 
@@ -177,6 +269,31 @@ USING ARRANGE
 2. Sort kids to find the kid who produced the least amount of words on the 1st visit.
 
 ```{r}
+#Arrange kiddies, Child.ID 55 produced the most words on the 6th visit
+maxT_sortedCHI <- subset(ASD_data, Visit == 6,
+select=c(Child.ID, Visit, Diagnosis, CHI_MLU, tokens_CHI)) %>%
+  arrange(desc(tokens_CHI))
+
+
+maxT_CHI <- ASD_data %>% 
+             group_by(Visit == 6) %>%
+             filter(tokens_CHI==max(tokens_CHI)) %>%
+             slice(which.max(tokens_CHI))
+
+#Arrange kiddies, Child.ID 57 produced the fewest nr. words on the 1th visit
+
+minT_sortedCHI <- subset(ASD_data, Visit == 1,
+select=c(Child.ID, Visit, Diagnosis, CHI_MLU, tokens_CHI)) %>%
+  arrange(desc(-tokens_CHI))
+
+
+minT_CHI <- ASD_data %>% 
+             group_by(Visit == 1) %>%
+             filter(tokens_CHI==min(tokens_CHI)) %>%
+             slice(which.min(tokens_CHI))
+
+
+
 
 
 ```
@@ -187,6 +304,17 @@ USING SELECT
 2. What happens if you include the name of a variable multiple times in a select() call?
 
 ```{r}
+#Create subset
+CHI_ASD <- subset(ASD_data,
+select=c(Child.ID, Visit, Diagnosis, CHI_MLU, tokens_CHI))
+
+#It creates another column of the variable when selecting it mulitple times
+
+CHI_ASD <- subset(ASD_data,
+select=c(Child.ID, Visit, Diagnosis, CHI_MLU, tokens_CHI, tokens_CHI))
+ 
+
+
 
 ```
 
@@ -197,6 +325,14 @@ USING MUTATE, SUMMARISE and PIPES
 3. The solution to task above enables us to assess the average amount of words produced by each child. Why don't we just use these average values to describe the language production of the children? What is the advantage of keeping all the data?
 
 ```{r}
+#1. 
 
+Mean_wordtoken_All <- ASD_data %>% 
+  mutate(mean(round(tokens_CHI)))
+#2.
+ASD_dataMean <- ASD_data %>%
+  group_by(Child.ID) %>%
+  mutate(mean_ind = mean(tokens_CHI))
+#3.
 
 ```
