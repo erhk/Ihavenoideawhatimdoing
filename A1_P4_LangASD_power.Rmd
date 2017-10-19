@@ -1,0 +1,264 @@
+---
+title: "Assignment 1 - Language Development in ASD - part 4"
+author: "Emily R. H. Kelly"
+date: "August 10, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Welcome to the fourth exciting part of the Language Development in ASD exercise
+
+In this exercise we will assess how many participants we would need to adequately replicate our findings (ensuring our sample size is adequate, our alpha at 0.05 and our beta at 0.8).
+
+### Exercise 1
+
+How much power does your study have (if your model estimates are quite right)?
+- [GitHub]Load your dataset, fit your favorite model, assess power for your main effects and interactions of interest.
+```{r}
+setwd("~/R/R - Datascripts/Assignment 1/Ihavenoideawhatimdoing")
+library(ggplot2);library(pastecs);library(rmarkdown);library(tidyr);library(plyr);
+library(dplyr);library(QuantPsyc);library(VIF);library(stringr);library(tidytext);library(DHARMa)
+library(lme4);library(lmerTest);library(psych);library(MuMIn);library(tidyverse);library(magrittr);library(Metrics);library(caret);library(simr)
+
+#Load dataset from part 1
+ASDdata = read.delim('ASD_data.csv', sep = ',')
+
+----------------------------------------------------------------
+#Model without interaction
+#Fit newlm3 model from assignment P3. 
+Bmodel3 <- lmer(CHI_MLU ~ Diagnosis + Visit + MOT_MLU + ADOS1 + tokens_MOT + tokens_CHI + (1+Visit|Child.ID), data=ASDdata, REML = FALSE)
+summary(Bmodel3)
+power <- powerSim(Bmodel3, nsim = 200)
+power
+
+#Asses power of main effect. nsim = amount of simulations.
+#Power for predictor = 98% (89.35, 99.95)
+#Effect size for Visit is 0,091
+powerV <- powerSim(Bmodel3,fixed("Visit"), nsim=50)
+powerV
+
+#Power for diagnosis. 
+#Power for predictor = 44% (29.99, 58.75)
+#Effect size for diagnosis is -0,32.
+powerV_Diag <- powerSim(Bmodel3,fixed("Diagnosis"),nsim=50)
+powerV_Diag
+summary(Bmodel3)
+
+#Effect size for MOT_MLU is 39
+#95% confidence interval 100% (92.89, 100)
+powerV_MOTMLU <- powerSim(Bmodel3, fixed("MOT_MLU"), nsim = 50)
+powerV_MOTMLU
+
+#Effect size for ADOS1 is -0,025
+#Power for predictor = 34.00% (21.21, 48.77) 
+powerV_ADOS1 <- powerSim(Bmodel3, fixed("ADOS1"), nsim = 50)
+powerV_ADOS1
+
+#Effect size for tokens_MOT is -0,00029
+#Power for predictor = 100% (92.89, 100)
+powerV_tokens_MOT <- powerSim(Bmodel3, fixed("tokens_MOT"), nsim = 50)
+powerV_tokens_MOT
+
+#Effect size for tokens_CHI is 0,0017
+#Power for predictor = 100% (92.89, 100)
+powerV_tokens_CHI <- powerSim(Bmodel3, fixed("tokens_CHI"), nsim = 50)
+powerV_tokens_CHI
+
+
+----------------------------------------------------------------
+#Model with interactions.
+#Fit newml3 model from assignment P3. 
+Bmodel3_int <- lmer(CHI_MLU ~ Diagnosis * Visit + MOT_MLU + ADOS1 + tokens_MOT + tokens_CHI + (1+Visit|Child.ID), data=ASDdata, REML = FALSE)
+summary(Bmodel3_int)
+
+#Effect size for Visit is 0.012
+#Power for predictor = 0,00% (0.00, 7.11)
+powerVInt_Visit <- powerSim(Bmodel3_int, fixed("Visit"),nsim=50)
+powerVInt_Visit
+
+
+#Effect size for Diagnosis is -0,748
+#Power for predictor = 90% (78.19, 96.67) .
+powerVInt_Diag <- powerSim(Bmodel3_int,fixed("Diagnosis"),nsim=50)
+powerVInt_Diag
+summary(Bmodel3_int)
+
+#Effect size for MOT_MLU is 0,38
+#Power for predictor = 100% (92.89, 100.0)
+powerVInt_MOTMLU <- powerSim(Bmodel3_int, fixed("MOT_MLU"), nsim = 50)
+powerVInt_MOTMLU
+
+#Effect size for ADOS1 is -0,029
+#Power for predictor = 36,00% (22.92, 50.81)
+powerVInt_ADOS1 <- powerSim(Bmodel3_int, fixed("ADOS1"), nsim = 50)
+powerVInt_ADOS1
+
+#Effect size for tokens_MOT is  -0,00027
+#Power for predictor =  100% (69,15, 100)
+powerVInt_tokens_MOT <- powerSim(Bmodel3_int, fixed("tokens_MOT"), nsim = 50)
+powerVInt_tokens_MOT
+
+#Effect size for tokens_CHI is 0,0017
+#Power for predictor = 100% (92.89, 100)
+powerVInt_tokens_CHI <- powerSim(Bmodel3_int, fixed("tokens_CHI"), nsim = 50)
+powerVInt_tokens_CHI
+
+#Effect size for interaction diagnosisTD and visit 0.16
+#Power for predictor = 0.00% (0.00, 7.11)
+powerVInt_interact <- powerSim(Bmodel3_int, fixed("DiagnosisTD:Visit"), nsim = 50)
+powerVInt_interact
+```
+
+- Report the power analysis and comment on what you can (or cannot) use its estimates for.
+
+I can use my estimates for performing my poweranalysis. 
+
+### Exercise 2
+
+How would you perform a more conservative power analysis?
+- Identify and justify a minimum effect size for each of your relevant effects
+- [GitHub] take the model from exercise 1 and replace the effects with the minimum effect size that you'd accept.
+- [GitHub] assess the power curve by Child.ID, identifying an ideal number of participants to estimate each effect
+```{r}
+#To perform a more conservative power analysis i would probably pick lower effect sizes.
+#I would pick the minium effect sizes that i found in exercise 1 from running a simulation on each fixed effect. I did this for my model with and without interaction.
+
+#Without interaction
+summary(Bmodel3)
+fixef(Bmodel3)["Visit"] <- 0.091
+fixef(Bmodel3)["DiagnosisTD"] <- -0.32
+powerCurveV = powerCurve(Bmodel3, fixed("Visit"),along="Child.ID", nsim=50)
+powerCurveV
+plot(powerCurveV)
+
+#Visit
+#we see that for reaching a power of 80 for our effect we need 20< participants
+
+#Diagnosis
+powerCurveV_diag= powerCurve(Bmodel3, fixed("Diagnosis"),along="Child.ID", nsim=50)
+powerCurveV_diag
+plot(powerCurveV_diag)
+#We see that we need a lot more than 60 participants
+
+#With interaction, replace fixed() in curve with fixed effect for interaction. 
+summary(Bmodel3_int)
+fixef(Bmodel3_int)["DiagnosisTD"]<- -0.7481
+fixef(Bmodel3_int)["Visit"] <- 0.012
+fixef(Bmodel3_int)["MOT_MLU"] <- 0.38
+fixef(Bmodel3_int)["ADOS1"] <- -0.029
+fixef(Bmodel3_int)["tokens_MOT"] <- -0.00027
+fixef(Bmodel3_int)["tokens_CHI"] <- 0.0017
+fixef(Bmodel3_int)["DiagnosisTD:Visit"] <- 0.16
+
+#Diagnosis
+powerCurveInt = powerCurve(Bmodel3_int,fixed("Diagnosis"), along="Child.ID", nsim = 50)
+plot(powerCurveInt)
+powerCurveInt
+#We see that we need 40< participants for getting a power of 80%
+
+#Visit
+powerCurveInt_Visit = powerCurve(Bmodel3_int,fixed("Visit"), along="Child.ID", nsim = 50)
+plot(powerCurveInt_Visit)
+powerCurveInt_Visit
+#We see that 
+
+#MOT_mlu
+powerCurveInt_MOTmlu = powerCurve(Bmodel3_int,fixed("MOT_mlu"), along="Child.ID", nsim = 50)
+plot(powerCurveInt_MOTmlu)
+powerCurveInt_MOTmlu
+
+#ADOS1
+powerCurveInt_ADOS = powerCurve(Bmodel3_int,fixed("ADOS1"), along="Child.ID", nsim = 50)
+plot(powerCurveInt_ADOS)
+powerCurveInt_ADOS
+
+#tokens_MOT
+powerCurveInt_tMOT = powerCurve(Bmodel3_int,fixed("tokens_MOT"), along="Child.ID", nsim = 50)
+plot(powerCurveInt_tMOT)
+powerCurveInt_tMOT
+
+#tokens_CHI
+powerCurveInt_tCHI = powerCurve(Bmodel3_int,fixed("tokens_CHI"), along="Child.ID", nsim = 50)
+plot(powerCurveInt_tCHI)
+powerCurveInt_tCHI
+
+#tokens interaction diagnosis:Visit
+powerCurveInt_DiagVisit = powerCurve(Bmodel3_int,fixed("Diagnosis:Visit"), along="Child.ID", nsim = 50)
+plot(powerCurveInt_DiagVisit)
+powerCurveInt_DiagVisit
+```
+
+
+- OPTIONAL if your power estimates do not reach an acceptable threshold simulate additional participants and repeat the previous analysis
+```{r}
+
+```
+
+- Report the power analysis and comment on what you can (or cannot) use its estimates for.
+
+```{r}
+
+
+### Riccardo's clumsy function to simulate new participants
+### TO DO points are only notes for myself, so not part of the assignment
+
+createNewData <- function (participants,visits,model){
+  # participants is the number of subjects
+  # visits is the number of visits
+  # TO DO: LOOP THROUGH ALL FE ROWS AND AUTOMATICALLY EXTRACT NAMES OF FIXED EFFECTS AND ESTIMATES
+  fe <- fixef(model)
+  Intercept <- fe[1] #intercept
+  bVisit <- fe[2] #visit
+  bDiagnosis <- fe[3] #diagnosis
+  bVisitDiagnosis <- fe[4] #visit diagnosis interaction
+  # TO DO: INTEGRATE STANDARD ERROR?
+  
+  # TO DO: LOOP THROUGH ALL VC COMPONENTS AND AUTOMATICALLY EXTRACT NAMES OF EFFECTS AND ESTIMATES
+  vc<-VarCorr(model) # variance component
+  sigmaSubject <- as.numeric(attr(vc[[1]],"stddev")[1]) # random intercept by subject
+  sigmaVisit <- as.numeric(attr(vc[[1]],"stddev")[2]) # random slope of visit over subject
+  sigmaResiduals <- as.numeric(attr(vc,"sc"))
+  sigmaCorrelation <- as.numeric(attr(vc[[1]],"correlation")[2])
+  
+  # Create an empty dataframe
+  d=expand.grid(Visit=1:visits,Child.ID=1:participants)
+  # Randomly sample from a binomial (to generate the diagnosis)
+  condition <- sample(rep(0:1, participants/2))
+  d$Diagnosis<-condition[d$Child.ID]
+  d$Diagnosis[is.na(d$Diagnosis)]<-1
+  
+  ## Define variance covariance matrices:
+  Sigma.u<-matrix(c(sigmaSubject^2,
+                    sigmaCorrelation*sigmaSubject*sigmaVisit,
+                    sigmaCorrelation*sigmaSubject*sigmaVisit,
+                    sigmaVisit^2),nrow=2)
+  
+  ## generate new fake participants (column1=RandomIntercept, column2=RandomSlope)
+  u<-mvrnorm(n=participants,
+             mu=c(0,0),Sigma=cov(ranef(model)$Child.ID))
+  
+  ## now generate fake data:
+  ### the outcome is extracted from a gaussian with
+  ### the solution to the model's equation as mean and
+  ### the residual standard deviation as standard deviation 
+  d$CHI_MLU <- rnorm(participants*visits,
+                     (Intercept+u[,1]) +
+                     (bVisit+u[,2])*d$Visit + 
+                     bDiagnosis*d$Diagnosis ,sigmaResiduals)  
+  
+  return(d)
+}
+```
+
+
+### Exercise 3
+
+Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why.
+
+
+
+
+
