@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 title: "Assignment 1 - Language Development in ASD - part 3"
 author: "Riccardo Fusaroli"
@@ -25,7 +26,7 @@ N.B. There are several datasets for this exercise, so pay attention to which one
 setwd("~/R/R - Datascripts/Assignment 1/Ihavenoideawhatimdoing")
 library(ggplot2);library(pastecs);library(rmarkdown);library(tidyr);library(plyr);
 library(dplyr);library(QuantPsyc);library(VIF);library(stringr);library(tidytext);library(DHARMa)
-library(lme4);library(lmerTest);library(psych);library(MuMIn);library(tidyverse);library(magrittr);library(Metrics)
+library(lme4);library(lmerTest);library(psych);library(MuMIn);library(tidyverse);library(magrittr);library(Metrics);library(caret)
 
 #Load in datasets
 ASDdata = read.delim('ASD_data.csv', sep = ',')
@@ -48,6 +49,13 @@ How did your models from last time perform? In this exercise you have to compare
 
 Create train model on Part 2 data and model
 ```{r}
+myvars1 <- names(ASDdata) %in% c("X") 
+ASDdata <- ASDdata[!myvars1]
+
+ASDdata <- dplyr::rename(ASDdata, Non_verbal_IQ.y = Non_verbal_IQ1)
+
+ASDdata <- dplyr::rename(ASDdata, verbal_IQ.y = Verbal_IQ1)
+
 #Use old model on new data
 old_model <- lmer(CHI_MLU ~ Diagnosis * Visit + ADOS1 + (1+Visit|Child.ID), ASDdata, REML = FALSE)
 
@@ -163,25 +171,36 @@ summary(Chi_mlu)
 #install.packages("caret") for creating folds
 library(caret)
 
+# --- Framework --- #
+# for i in folds
+# 	Select Data
+# 	  create test data; Test = subset(Data, child.id%in% fold)
+# 	  create train data; TrainD = 
+# 	Train model on train data
+# 	Test the model on test data
+#   Save the performance
 
-k <- 10 #the number of folds
-ASD_folds <- createFolds(unique(ASDdata$Child.ID, k=k))
-ASDdata$holdoutpred <- rep(0,nrow(ASDdata))
+
+k <- 10 #the number of folds. 10-fold cross validation.We break up ASDdata set into 10 folds, call each fold the testing set and build the model on the other 9.
+ASD_folds <- createFolds(unique(ASDdata$Child.ID, k=k))#unique assures that no 'leakage' happens (leakage: that a child is in both training and testing)
+
+#ASDdata$holdoutpred <- rep(0,nrow(ASDdata))
 testvalues = NULL
 trainvalues = NULL
 n = 1
 for(i in 1:k){
   test <- subset(ASDdata, Child.ID %in% ASD_folds[[i]]) #find all subjects in ASD data, look in all foldere for these children in folders [in[in]]
   train<- subset(ASDdata, !(Child.ID %in% ASD_folds[[i]])) #Do the opposite        
-  
-  newlm <- lmer(CHI_MLU ~ Diagnosis * Visit + ADOS1 + (1+Visit|Child.ID), data=train) #Get your new linear model (just fit on the train data)
+#Train model on train data
+  newlm <- lmer(CHI_MLU ~ Diagnosis * Visit + ADOS1 + (1+Visit|Child.ID), data=train, REML = FALSE) #Get your new linear model (just fit on the train data)
 
-trainpred <- rmse(predict(newlm, train, allow.new.levels = TRUE), train$CHI_MLU)#Get the predicitons for the test set (from the model just fit on the rmse train data)
-print(trainpred) 
+  trainpred <- rmse(predict(newlm, train, allow.new.levels = TRUE), train$CHI_MLU)#Get the predicitons for the test set (from the model just fit on the rmse train data)
+  print(trainpred) 
+#0,3563
 
-testpred <- rmse(predict(newlm, test, allow.new.levels = TRUE), test$CHI_MLU) #Get the predicitons for the test set (from the model just fit on the rmse train data)
-print(testpred) #show error of model
-testpred
+  testpred <- rmse(predict(newlm, test, allow.new.levels = TRUE),test$CHI_MLU) #Get the predicitons for the test set (from the model just fit on the rmse train data)
+  print(testpred) #show error of model
+#0,6230
 
 #Save model error as values 
 testvalues[n]=(testpred)
@@ -189,32 +208,145 @@ trainvalues[n]=(trainpred)
 n = n+1
 
 #Save predictions in ASDdata set
-ASDdata$holdoutpred[ASDdata$Child.ID %in% ASD_folds[[i]]] <- predict(newlm, test, allow.new.levels = TRUE) #Show predictions
+#ASDdata$holdoutpred[ASDdata$Child.ID %in% ASD_folds[[i]]] <- predict(newlm, test, allow.new.levels = TRUE) #Show predictions
 
-#fixef - undersøg måske
 }
 
-#ASDdata$holdoutpred #Show predictions
-stat.desc(testvalues)
+
 
 #Find mean and SE for test and train data
 stat.desc(testvalues)
 sd(testvalues)/sqrt(length(testvalues))
 
-stat.desc(testvalues)
+stat.desc(trainvalues)
 sd(trainvalues)/sqrt(length(trainvalues))
 
 ```
 Report results:
-We crossvaliudated our train and test data on 10 folds. We found the test error to be M = 0,70 and SE = 0,063 We found the trainingerror to be M = 0,34 and SE = 0,0022.
+We crossvaliudated our train and test data on 10 folds. We found the test error to be M = 0,668 and SE = 0,048. We found the trainingerror to be M = 0, and SE = 0,0022. The root mean square error (rmse) on our trained data was = 0,35, but did not perform well on our testdata = 0,62
 
 
 - Now try to find the best possible predictive model of ChildMLU, that is, the one that produces the best cross-validated results.
-```{r}
 
-#Test more models this way to find best model - loop and shit, make trainpred <- rmse(predict(new model, dataset, allow.new.levels = TRUE), dataset$CHI_MLU)
+
+#Test more models this way to find best model
+
+#Model 1
+```{r}
+testvalues1 = NULL
+trainvalues1 = NULL
+n = 1
+for(i in 1:k){
+  test <- subset(ASDdata, Child.ID %in% ASD_folds[[i]]) #find all subjects in ASD data, look in all foldere for these children in folders [in[in]]
+  train<- subset(ASDdata, !(Child.ID %in% ASD_folds[[i]])) #Do the opposite        
+#Train model on train data
+  newlm1 <- lmer(CHI_MLU ~ Diagnosis * Visit + ADOS1 + MOT_MLU + (1+Visit|Child.ID), data=train, REML = FALSE) #Get your new linear model (just fit on the train data)
+
+  trainpred1 <- rmse(predict(newlm1, train, allow.new.levels = TRUE), train$CHI_MLU)#Get the predicitons for the test set (from the model just fit on the rmse train data)
+print(trainpred1) 
+#0,3423
+
+  testpred1 <- rmse(predict(newlm1, test, allow.new.levels = TRUE),test$CHI_MLU) #Get the predicitons for the test set (from the model just fit on the rmse train data)
+print(testpred1) #show error of model
+#0,5745
+
+
+#Save model error as values 
+testvalues1[n]=(testpred1)
+trainvalues1[n]=(trainpred1)
+n = n+1
+
+}
+
+
+
+#Find mean and SE for test and train data
+mean(testvalues1)
+sd(testvalues1)/sqrt(length(testvalues1))
+
+mean(trainvalues1)
+sd(trainvalues1)/sqrt(length(trainvalues1))
 
 ```
+Test M = 0,334 and SE = 0,053. We found the train to be M = 0,64 and SE = 0,002. The root mean square error (rmse) on our trained data was = 0,3423, but did not perform well on our testdata = 0,5745
+
+
+#Model 2
+```{r}
+
+testvalues2 = NULL
+trainvalues2 = NULL
+n = 1
+for(i in 1:k){
+  test <- subset(ASDdata, Child.ID %in% ASD_folds[[i]]) #find all subjects in ASD data, look in all foldere for these children in folders [in[in]]
+  train<- subset(ASDdata, !(Child.ID %in% ASD_folds[[i]])) #Do the opposite        
+#Train model on train data
+  newlm2 <- lmer(CHI_MLU ~ Diagnosis * Visit * MOT_MLU + ADOS1 + (1+Visit|Child.ID), data=train, REML = FALSE) #Get your new linear model (just fit on the train data)
+
+  trainpred2 <- rmse(predict(newlm2, train, allow.new.levels = TRUE), train$CHI_MLU)#Get the predicitons for the test set (from the model just fit on the rmse train data)
+  print(trainpred2) 
+#0,3368
+
+  testpred2 <- rmse(predict(newlm2, test, allow.new.levels = TRUE),test$CHI_MLU) #Get the predicitons for the test set (from the model just fit on the rmse train data)
+  print(testpred2) #show error of model
+#0,5511
+
+#Save model error as values 
+testvalues2[n]=(testpred2)
+trainvalues2[n]=(trainpred2)
+n = n+1
+
+}
+
+
+
+#Find mean for test and train data
+mean(testvalues2)
+
+mean(trainvalues2)
+
+```
+Test M = 0,647 and SE = 0,057. We found the train to be M = 0,327. The root mean square error (rmse) on our trained data was =0,3368 , but did not perform well on our testdata = 0,5511
+
+
+
+#Model 3
+```{r}
+testvalues3 = NULL
+trainvalues3 = NULL
+n = 1
+for(i in 1:k){
+  test <- subset(ASDdata, Child.ID %in% ASD_folds[[i]]) #find all subjects in ASD data, look in all foldere for these children in folders [in[in]]
+  train<- subset(ASDdata, !(Child.ID %in% ASD_folds[[i]])) #Do the opposite        
+#Train model on train data
+  newlm3 <- lmer(CHI_MLU ~ Diagnosis * Visit * MOT_MLU + ADOS1 + tokens_MOT + tokens_CHI + (1+Visit|Child.ID), data=train, REML = FALSE) #Get your new linear model (just fit on the train data)
+
+  trainpred3 <- rmse(predict(newlm3, train, allow.new.levels = TRUE), train$CHI_MLU)#Get the predicitons for the test set (from the model just fit on the rmse train data)
+print(trainpred3) 
+#0,2868
+
+  testpred3 <- rmse(predict(newlm3, test, allow.new.levels = TRUE),test$CHI_MLU) #Get the predicitons for the test set (from the model just fit on the rmse train data)
+print(testpred3) #show error of model
+#0,4383
+
+
+#Save model error as values 
+testvalues3[n]=(testpred3)
+trainvalues3[n]=(trainpred3)
+n = n+1
+
+}
+
+
+
+#Find mean for test and train data
+mean(testvalues3)
+
+mean(trainvalues3)
+```
+Test M = 0,473. We found the train to be M = 0,281. The root mean square error (rmse) on our trained data was =0,2868 , but did not perform well on our testdata = 0,4383
+
+This would be our best model due to the smallest difference between test and trained datas rmse.
 
 - Bonus Question 1: How would you go comparing the performance of the basic model and the cross-validated model on the testing set?
 
@@ -249,19 +381,17 @@ Means
 #Look at Bernie tibble. Means for his MLU compared to other TD kids over visits.
 #We see that he develops increasingly slower compared to the others. 
 
-#Variables   estimates
-#MLU         - 0,2
-#Visit       1  
-#Verbal IQ   1
-#TD          1
+#Bernie is autistic, we exclude the asd kids. We want to compare him to the average td kids. So we Bernie_data <- df3[which(df3$Child.ID == '2'), ]
 
-#MLU - 0,2 + 1*Visit + 1*Verbal IQ + 1*Diagnosis
+Bpred <- predict(newlm3, Bernie_data, allow.new.levels=TRUE)
 
+B6 <- subset(Bernie_data, Visit == 6)
+predict(newlm3, B6$CHI_MLU, allow.new.levels =TRUE)
 
-#Bernie isnt autistic, we exclude the asd kids. We want to compare him to the average td kids. So we need the six TDs average mlu.
+fixef(newlm3)
+newlm3
 
-predict(, Bernie_data)
-
+#Make matrix for all values
 
 ```
 - how does the child fare compared to the model predictions at Visit 6? Is the child below or above expectations? (tip: use the predict() function on Bernie's data only and compare the prediction with the actual performance of the child)
@@ -279,5 +409,4 @@ Then try to find the best possible predictive model of ChildMLU, that is, the on
 
 ### OPTIONAL: Exercise 5): Using Lasso for model selection
 Welcome to the last secret exercise. If you have already solved the previous exercises, and still there's not enough for you, you can expand your expertise by learning about penalizations. Check out this tutorial: http://machinelearningmastery.com/penalized-regression-in-r/ and make sure to google what penalization is, with a focus on L1 and L2-norms. Then try them on your data!
-
 
