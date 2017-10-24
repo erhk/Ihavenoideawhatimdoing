@@ -23,11 +23,11 @@ N.B. There are several datasets for this exercise, so pay attention to which one
 * Word data: https://www.dropbox.com/s/1ces4hv8kh0stov/token_test.csv?dl=0
 
 ```{r Load Data}
-setwd("~/R/R - Datascripts/Assignment 1/Ihavenoideawhatimdoing")
+setwd("~/R/R - Datascripts/Assignment 1/Ihavenoideawhatimdoing-master")
 library(ggplot2);library(pastecs);library(rmarkdown);library(tidyr);library(plyr);
 library(dplyr);library(QuantPsyc);library(VIF);library(stringr);library(tidytext);library(DHARMa)
-library(lme4);library(lmerTest);library(psych);library(MuMIn);library(tidyverse);library(magrittr);library(Metrics);library(caret)
-
+library(lme4);library(lmerTest);library(psych);library(MuMIn);library(tidyverse);library(magrittr);library(Metrics);library(caret):library(MAd)
+install.packages("MAd")
 #Load in datasets
 ASDdata = read.delim('ASD_data.csv', sep = ',')
 
@@ -368,29 +368,34 @@ You want to evaluate:
 (Tip: recreate the equation of the model: Y=Intercept+BetaX1+BetaX2, etc; input the average of the TD group  for each parameter in the model as X1, X2, etc.).
 ```{r}
 #Evaluate Bernie, child 2 in df3, extract mlu at visits, diagnosis, verbal iq etc.
+#Bernie is autistic, we exclude the other kids. We want to compare him to the average td kids. 
+#We make a seperate dataframe for only Bernie.
 Bernie_data <- df3[which(df3$Child.ID == '2'), ]
 
-#Use pipes to extract means from TD children in bernie dataframe
-Means = df3 %>%
+#Use pipes to extract MLU means from TD children and then for Bernie.
+TD_Mean_MLU = df3 %>%
   filter(Diagnosis == 'TD') %>%
   group_by(Visit) %>%
-  summarise(Mean = mean(CHI_MLU, na.rm = T))
+  summarise(TD_Mean_MLU = mean(CHI_MLU, na.rm = T))
 
-Means
+TD_Mean_MLU
 
-#Look at Bernie tibble. Means for his MLU compared to other TD kids over visits.
+Bernie_Mean_MLU = df3[which(df3$Child.ID == '2'), ] %>%
+  filter(Diagnosis == 'ASD') %>%
+  group_by(Visit) %>%
+  summarise(Bernie_Mean_MLU = mean(CHI_MLU, na.rm = T))
+
+#Merge two extracted MLU means into Bernie_data dataframe
+Bernie_data1 <- merge(TD_Mean_MLU, Bernie_data1)  
+Bernie_data1 <- merge(Bernie_Mean_MLU, Bernie_data1)
+#Look tw Means for his MLU compared to other TD kids over visits.
 #We see that he develops increasingly slower compared to the others. 
+x <- Bernie_data1$Bernie_Mean_MLU - Bernie_data1$TD_Mean_MLU
+#Find absolute difference between Bernie and the TD children
+mad(x)
+#0.2255055
 
-#Bernie is autistic, we exclude the asd kids. We want to compare him to the average td kids. So we Bernie_data <- df3[which(df3$Child.ID == '2'), ]
-
-Bpred <- predict(newlm3, Bernie_data, allow.new.levels=TRUE)
-
-B6 <- subset(Bernie_data, Visit == 6)
-predict(newlm3, B6$CHI_MLU, allow.new.levels =TRUE)
-
-fixef(newlm3)
-newlm3
-
+predict(newlm3, Bernie_data)
 #Make matrix for all values
 
 ```
