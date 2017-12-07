@@ -23,11 +23,11 @@ N.B. There are several datasets for this exercise, so pay attention to which one
 * Word data: https://www.dropbox.com/s/1ces4hv8kh0stov/token_test.csv?dl=0
 
 ```{r Load Data}
-setwd("~/R/R - Datascripts/Assignment 1/Ihavenoideawhatimdoing-master")
+setwd("~/R/R - Datascripts/Assignment 1 and 2/Ihavenoideawhatimdoing-master (1)/Ihavenoideawhatimdoing-master")
 library(ggplot2);library(pastecs);library(rmarkdown);library(tidyr);library(plyr);
 library(dplyr);library(QuantPsyc);library(VIF);library(stringr);library(tidytext);library(DHARMa)
 library(lme4);library(lmerTest);library(psych);library(MuMIn);library(tidyverse);library(magrittr);library(Metrics);library(caret):library(MAd)
-install.packages("MAd")
+
 #Load in datasets
 ASDdata = read.delim('ASD_data.csv', sep = ',')
 
@@ -58,10 +58,12 @@ ASDdata <- dplyr::rename(ASDdata, verbal_IQ.y = Verbal_IQ1)
 
 #Use old model on new data
 old_model <- lmer(CHI_MLU ~ Diagnosis * Visit + ADOS1 + (1+Visit|Child.ID), ASDdata, REML = FALSE)
-
-#Use rmse, we want test performance of model - train model. Take the trained model and do the rmse on the new data.
+old_model
+#Use rmse, we want test performance of model - train model. Take the trained model and do the rmse on the new data. RMSE gives the standard deviation of the model prediction error. Small value = better performance.
+library(modelr)
 rmse(old_model, ASDdata)
 
+#0.347
 ```
 
 Clean and tidy 3 new datasets
@@ -146,9 +148,21 @@ write.csv(df3, file = "Smaller dataset.csv")
 
 ```
 
+Test new data on old model
+```{r}
+#Load newly made dataset because it makes life easier!
+df3 = read.delim('Smaller dataset.csv', sep = ',')
+rmse(old_model, df3)
 
-[HERE GOES YOUR ANSWER]
+#0.786
+```
 
+
+model and train set
+0.347
+
+model and test set
+0.786
 
 ### Exercise 2) Model Selection via Cross-validation (N.B: ChildMLU!)
 
@@ -158,6 +172,7 @@ In this exercise you have to use cross-validation to calculate the predictive er
 
 - Create the basic model of ChildMLU as a function of Time and Diagnosis (don't forget the random effects!).
 ```{r}
+
 #Create basic model.
 Chi_mlu <- lmer(CHI_MLU ~ Diagnosis + Visit + (1+Visit|Child.ID), df3, REML = FALSE)
 summary(Chi_mlu)
@@ -196,11 +211,10 @@ for(i in 1:k){
 
   trainpred <- rmse(predict(newlm, train, allow.new.levels = TRUE), train$CHI_MLU)#Get the predicitons for the test set (from the model just fit on the rmse train data)
   print(trainpred) 
-#0,3563
+
 
   testpred <- rmse(predict(newlm, test, allow.new.levels = TRUE),test$CHI_MLU) #Get the predicitons for the test set (from the model just fit on the rmse train data)
   print(testpred) #show error of model
-#0,6230
 
 #Save model error as values 
 testvalues[n]=(testpred)
@@ -208,22 +222,21 @@ trainvalues[n]=(trainpred)
 n = n+1
 
 #Save predictions in ASDdata set
-#ASDdata$holdoutpred[ASDdata$Child.ID %in% ASD_folds[[i]]] <- predict(newlm, test, allow.new.levels = TRUE) #Show predictions
+# ASDdata$holdoutpred[ASDdata$Child.ID %in% ASD_folds[[i]]] <- predict(newlm, test, allow.new.levels = TRUE) #Show predictions
 
 }
 
 
 
-#Find mean and SE for test and train data
-stat.desc(testvalues)
-sd(testvalues)/sqrt(length(testvalues))
+#Find mean and SE for test and train data values.
+round(stat.desc(trainvalues),3)
 
-stat.desc(trainvalues)
-sd(trainvalues)/sqrt(length(trainvalues))
+round(stat.desc(testvalues), 3)
+
 
 ```
 Report results:
-We crossvaliudated our train and test data on 10 folds. We found the test error to be M = 0,668 and SE = 0,048. We found the trainingerror to be M = 0, and SE = 0,0022. The root mean square error (rmse) on our trained data was = 0,35, but did not perform well on our testdata = 0,62
+We crossvaliudated our train and test data on 10 folds. We found the trainingerror to be M = 0.348 and SE = 0,002. We found the test error to be M = 0,691 and SE = 0,070. 
 
 
 - Now try to find the best possible predictive model of ChildMLU, that is, the one that produces the best cross-validated results.
@@ -243,12 +256,9 @@ for(i in 1:k){
   newlm1 <- lmer(CHI_MLU ~ Diagnosis * Visit + ADOS1 + MOT_MLU + (1+Visit|Child.ID), data=train, REML = FALSE) #Get your new linear model (just fit on the train data)
 
   trainpred1 <- rmse(predict(newlm1, train, allow.new.levels = TRUE), train$CHI_MLU)#Get the predicitons for the test set (from the model just fit on the rmse train data)
-print(trainpred1) 
-#0,3423
 
   testpred1 <- rmse(predict(newlm1, test, allow.new.levels = TRUE),test$CHI_MLU) #Get the predicitons for the test set (from the model just fit on the rmse train data)
 print(testpred1) #show error of model
-#0,5745
 
 
 #Save model error as values 
@@ -260,15 +270,13 @@ n = n+1
 
 
 
-#Find mean and SE for test and train data
-mean(testvalues1)
-sd(testvalues1)/sqrt(length(testvalues1))
+#Find mean and SE for test and train data values.
+round(stat.desc(trainvalues1),3)
 
-mean(trainvalues1)
-sd(trainvalues1)/sqrt(length(trainvalues1))
+round(stat.desc(testvalues1), 3)
 
 ```
-Test M = 0,334 and SE = 0,053. We found the train to be M = 0,64 and SE = 0,002. The root mean square error (rmse) on our trained data was = 0,3423, but did not perform well on our testdata = 0,5745
+Train error M = 0,336 and SE = 0,002. Test error M = 0,644 and SE = 0,064. 
 
 
 #Model 2
@@ -285,11 +293,11 @@ for(i in 1:k){
 
   trainpred2 <- rmse(predict(newlm2, train, allow.new.levels = TRUE), train$CHI_MLU)#Get the predicitons for the test set (from the model just fit on the rmse train data)
   print(trainpred2) 
-#0,3368
+
 
   testpred2 <- rmse(predict(newlm2, test, allow.new.levels = TRUE),test$CHI_MLU) #Get the predicitons for the test set (from the model just fit on the rmse train data)
   print(testpred2) #show error of model
-#0,5511
+
 
 #Save model error as values 
 testvalues2[n]=(testpred2)
@@ -299,15 +307,12 @@ n = n+1
 }
 
 
+#Find mean and SE for test and train data values.
+round(stat.desc(trainvalues2),3)
 
-#Find mean for test and train data
-mean(testvalues2)
-
-mean(trainvalues2)
-
+round(stat.desc(testvalues2), 3)
 ```
-Test M = 0,647 and SE = 0,057. We found the train to be M = 0,327. The root mean square error (rmse) on our trained data was =0,3368 , but did not perform well on our testdata = 0,5511
-
+We found the train to be M = 0,330 SE = 0.002 . Test M = 0,650 and SE = 0,070. 
 
 
 #Model 3
@@ -338,14 +343,12 @@ n = n+1
 }
 
 
+#Find mean and SE for test and train data values.
+round(stat.desc(trainvalues3),3)
 
-#Find mean for test and train data
-mean(testvalues3)
-
-mean(trainvalues3)
+round(stat.desc(testvalues3), 3)
 ```
-Test M = 0,473. We found the train to be M = 0,281. The root mean square error (rmse) on our trained data was =0,2868 , but did not perform well on our testdata = 0,4383
-
+We found the train to be M = 0,285, SE = 0.002 . Test M = 0,481, SE = 0.036.  
 This would be our best model due to the smallest difference between test and trained datas rmse.
 
 - Bonus Question 1: How would you go comparing the performance of the basic model and the cross-validated model on the testing set?
@@ -373,35 +376,45 @@ You want to evaluate:
 Bernie_data <- df3[which(df3$Child.ID == '2'), ]
 
 #Use pipes to extract MLU means from TD children and then for Bernie.
-TD_Mean_MLU = df3 %>%
-  filter(Diagnosis == 'TD') %>%
-  group_by(Visit) %>%
-  summarise(TD_Mean_MLU = mean(CHI_MLU, na.rm = T))
+# TD_Mean_MLU = df3 %>%
+#   filter(Diagnosis == 'TD') %>%
+#   group_by(Visit) %>%
+#   summarise(TD_Mean_MLU = mean(CHI_MLU, na.rm = T))
+# 
+# TD_Mean_MLU
+# 
+# Bernie_Mean_MLU = df3[which(df3$Child.ID == '2'), ] %>%
+#   filter(Diagnosis == 'ASD') %>%
+#   group_by(Visit) %>%
+#   summarise(Bernie_Mean_MLU = mean(CHI_MLU, na.rm = T))
 
-TD_Mean_MLU
+#Model
+newlm3Bernie <- lmer(CHI_MLU ~ Diagnosis * Visit * MOT_MLU + ADOS1 + tokens_MOT + tokens_CHI + (1+Visit|Child.ID), data=ASDdata, REML = FALSE) 
 
-Bernie_Mean_MLU = df3[which(df3$Child.ID == '2'), ] %>%
-  filter(Diagnosis == 'ASD') %>%
-  group_by(Visit) %>%
-  summarise(Bernie_Mean_MLU = mean(CHI_MLU, na.rm = T))
+#Subset Bernie from the test data including the variables that are also in your model:
+bernie = subset(df3, Child.ID == "2", select=c(Child.ID, Diagnosis, Visit, CHI_MLU, MOT_MLU,ADOS1, tokens_CHI, tokens_MOT))
 
-#Merge two extracted MLU means into Bernie_data dataframe
-Bernie_data1 <- merge(TD_Mean_MLU, Bernie_data1)  
-Bernie_data1 <- merge(Bernie_Mean_MLU, Bernie_data1)
-#Look tw Means for his MLU compared to other TD kids over visits.
-#We see that he develops increasingly slower compared to the others. 
-x <- Bernie_data1$Bernie_Mean_MLU - Bernie_data1$TD_Mean_MLU
-#Find absolute difference between Bernie and the TD children
-mad(x)
-#0.2255055
+#Create fake child, which is a child whose values are equal to the average performance of TDs on all variables.
 
-predict(newlm3, Bernie_data)
-#Make matrix for all values
+fakeChild= subset(df3, Diagnosis=='TD', select = c(Diagnosis)) %>% 
+group_by(Visit) %>% 
+dplyr::summarise(ADOS1 = mean(ADOS1),CHI_MLU = mean(CHI_MLU), MOT_MLU = mean(MOT_MLU), tokens_CHI =mean(tokens_CHI), tokens_MOT = mean(tokens_MOT))
+fakeChild$Child.ID=200
+fakeChild$Diagnosis = c("TD", "TD", "TD", "TD", "TD", "TD")
+
+
+#4) Then you can predict the model on the fake child, and also for bernie on the model and then compare.
+#the average prediction
+predict(newlm3, fakeChild, allow.new.levels=TRUE)
+
+#Bernies prediction
+predict(newlm3, bernie, allow.new.levels=TRUE)
+
 
 ```
 - how does the child fare compared to the model predictions at Visit 6? Is the child below or above expectations? (tip: use the predict() function on Bernie's data only and compare the prediction with the actual performance of the child)
 ### 
-[HERE GOES YOUR ANSWER]
+Bernie actually performs better than the fake child. At visit 6 his predicted mlu = 3.318, the fake child predicted mlu = 2.95. My models predicted Bernie mlu was actually very close to his actual mlu at visit 6 mlu = 3.448413. The fake TD child was also predicted to have an mlu = 2.952, where the actual mlu = 2.753. 
 
 ### OPTIONAL: Exercise 4) Model Selection via Information Criteria
 Another way to reduce the bad surprises when testing a model on new data is to pay close attention to the relative information criteria between the models you are comparing. Let's learn how to do that!

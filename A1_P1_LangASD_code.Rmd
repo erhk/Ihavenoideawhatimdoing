@@ -40,7 +40,7 @@ N.B. Create a GitHub repository for the Language Development in ASD set of assig
 Set the working directory (the directory with your data and code for these assignments):
 
 ```{r}
-setwd("~/R/R - Datascripts/Assignment 1/Ihavenoideawhatimdoing")
+setwd("C:/Users/emily/OneDrive/Dokumenter/R/R - Datascripts/Assignment 1 and 2/Ihavenoideawhatimdoing-master (1)/Ihavenoideawhatimdoing-master")
 library(ggplot2);library(pastecs);library(rmarkdown);library(tidyr);library(plyr);
 library(dplyr);library(QuantPsyc);library(VIF);library(stringr);library(tidytext);
 library(lme4);library(lmerTest);library(psych);library(MuMIn);library(tidyverse);library(magrittr)
@@ -137,7 +137,7 @@ demo_train <- rename(demo_train, Verbal_IQ = ExpressiveLangRaw)
 
 
 
-?select
+
 
 #Create new subsets with variables we want to use
 
@@ -212,7 +212,9 @@ Tip: as.numeric() might be a useful function, but not alone.
 Tip: Google "how to rename levels in R".
 
 ```{r}
-#convert Child.ID from factor to numeric
+#convert Child.ID from factor to numeric. str(data), check if factor or numeric
+#Correct, sort all ID's in numeric order
+levels(ASD_data$Child.ID) = 1:length(levels(ASD_data$Child.ID))
 ASD_data$Child.ID <- as.numeric(as.factor(ASD_data$Child.ID))
 
 #Revalue 1 and 2 to F and M. Have to make gender a factor first.
@@ -229,6 +231,7 @@ Save the data set using into a csv file. Hint: look into write.csv()
 
 ```{r}
 write.csv(ASD_data, file = "ASD_Data.csv")
+
 ```
 
 
@@ -244,21 +247,24 @@ List all kids who:
 3. have not completed all trials. Tip: Use pipes to solve this
 
 ```{r}
-#1. Counting, 97 children had a MLU of more than 2.7 morphemes
-count(filter(ASD_data, CHI_MLU >= 2.7))
+ASD_data= read.delim('ASD_data.csv', sep = ',')
+#Finding children who had a MLU over 2.7 in any of their visits. 34
+more = filter(ASD_data, CHI_MLU > 2.7)
+unique(more$Child.ID)
+#Finding children who had a mean MLU over 2.7 across all visits. 11
+ASD_data = na.omit(ASD_data)
+more_across_all= ASD_data %>% 
+      group_by(Child.ID) %>%
+      summarise(meanMLU = mean(CHI_MLU)) %>%
+      filter(meanMLU > 2.7)
+more_across_all
+#have not completed all trials. 13 kids
+missing = na.omit(ASD_data) %>% 
+      group_by(Child.ID) %>% 
+      tally() %>% 
+      filter(n < 6)
+missing
 
-#2.Selecting Visit 1 and CHI_MLU, setting the limit of morphemes to 1.5, then count amount of
-#CHI_MLU associated with Visit 1. 48 children had a MLU of less than 1.5 for their first visit.
-ASD_data %>%
-  dplyr::select(Visit, CHI_MLU) %>%
-  filter(CHI_MLU <= 1.5 & Visit == 1) %>%
-  count(Visit)
-
-#3. Amountof children that haven't completed the 6 trials, 296
-ASD_data %>%
-  dplyr::select(Visit) %>%
-  filter(Visit !=6) %>%
-  count(Visit !=6)
 
 ```
 
@@ -325,14 +331,28 @@ USING MUTATE, SUMMARISE and PIPES
 3. The solution to task above enables us to assess the average amount of words produced by each child. Why don't we just use these average values to describe the language production of the children? What is the advantage of keeping all the data?
 
 ```{r}
-#1. 
-
-Mean_wordtoken_All <- ASD_data %>% 
+#1.
+#Own solution:
+ASD_data <- ASD_data %>% 
   mutate(mean(round(tokens_CHI)))
+
+#Celines solution:
+ASD_data = mutate(ASD_data, GrandAvg = mean(tokens_CHI))
+
+
 #2.
-ASD_dataMean <- ASD_data %>%
+#My solution
+ASD_data <- ASD_data %>%
   group_by(Child.ID) %>%
   mutate(mean_ind = mean(tokens_CHI))
-#3.
 
+#Celines solution
+ChiAvg_AcrossVisits = ASD_data %>%
+  group_by(Child.ID)%>%
+  summarise(ChiAvgWord = mean(tokens_CHI))%>%
+  merge(Data)
+
+
+#3.
+#If we keep all the data it is easier to tell how time affects the language development.
 ```

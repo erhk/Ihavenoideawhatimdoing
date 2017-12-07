@@ -104,7 +104,7 @@ library(lme4);library(lmerTest);library(psych);library(MuMIn);library(tidyverse)
 
 ```{r Load Data}
 
-setwd("~/R/R - Datascripts/Assignment 1/Ihavenoideawhatimdoing")
+setwd("~/R/R - Datascripts/Assignment 1 and 2/Ihavenoideawhatimdoing")
 ASDdata = read.delim('ASD_data.csv', sep = ',')
 
 
@@ -129,35 +129,35 @@ ASDdata$Age1 <- as.numeric(ASDdata$Age1)
 #Violin plot: show the full range of the two groups.
 
 #Age
+library(ggplot2)
 BoxPlot_Age <- ggplot(ASDdata[ASDdata$Visit == "1",], aes(x = Diagnosis, y = Age1))
-BoxPlot + geom_boxplot(aes(fill = Gender)) 
- 
-  
+BoxPlot_Age + geom_boxplot(aes(fill = Diagnosis)) 
+
 vioPlot_Age <- ggplot(ASDdata[ASDdata$Visit == "1",], aes(x = Diagnosis, y = Age1))
-BoxPlot + geom_violin(aes(fill = Gender))
+BoxPlot + geom_violin(aes(fill = Diagnosis))
 
 #Mlu1
 BoxPlot_mlu <- ggplot(ASDdata[ASDdata$Visit == "1",], aes(x = Diagnosis, y = CHI_MLU))
-BoxPlot_mlu + geom_boxplot(aes(fill = Gender))
+BoxPlot_mlu + geom_boxplot(aes(fill = Diagnosis))
 
 vioPlot_mlu <- ggplot(ASDdata[ASDdata$Visit == "1",], aes(x = Diagnosis, y = CHI_MLU))
-vioPlot_mlu + geom_violin(aes(fill = Gender))
+vioPlot_mlu + geom_violin(aes(fill = Diagnosis))
 
 #V_IQ
 BoxPlot_VIQ <- ggplot(ASDdata[ASDdata$Visit == "1",], aes(x = Diagnosis, y = Verbal_IQ1))
-BoxPlot_VIQ + geom_boxplot(aes(fill = Gender))
+BoxPlot_VIQ + geom_boxplot(aes(fill = Diagnosis))
  
   
 vioPlot_VIQ <- ggplot(ASDdata[ASDdata$Visit == "1",], aes(x = Diagnosis, y = Verbal_IQ1))
-vioPlot_VIQ + geom_violin(aes(fill = Gender))
+vioPlot_VIQ + geom_violin(aes(fill = Diagnosis))
 
 #NV_IQ
 BoxPlot_NVIQ <- ggplot(ASDdata[ASDdata$Visit == "1",], aes(x = Diagnosis, y = Non_verbal_IQ1))
-BoxPlot_NVIQ + geom_boxplot(aes(fill = Gender))
+BoxPlot_NVIQ + geom_boxplot(aes(fill = Diagnosis))
  
   
 vioPlot_NVIQ <- ggplot(ASDdata[ASDdata$Visit == "1",], aes(x = Diagnosis, y = Non_verbal_IQ1))
-vioPlot_NVIQ + geom_violin(aes(fill = Gender))
+vioPlot_NVIQ + geom_violin(aes(fill = Diagnosis))
 
 #participants demographic characteristics, diagnosis, ADOS, Verbal IQ, Non Verbal IQ, Visit, Number of words used, Number of unique words used, length of utterance in both child and parents.
 
